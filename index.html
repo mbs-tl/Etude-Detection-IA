@@ -82,7 +82,7 @@
                         };
 
                         const [reelles, ia] = await Promise.all([
-                            fetchFolder('im_reel', 'Réelle'),
+                            fetchFolder('im_real', 'Réelle'),
                             fetchFolder('im_ia', 'IA')
                         ]);
 
@@ -155,7 +155,7 @@
                 <div className="min-h-screen flex items-center justify-center p-6 text-center">
                     <div className="max-w-md bg-white grid-ui p-8 rounded-2xl">
                         <h2 className="text-red-500 font-bold mb-2">Erreur de configuration</h2>
-                        <p className="text-sm text-slate-500">Vérifiez que vos dossiers <b>im_reel</b> et <b>im_ia</b> existent sur votre dépôt GitHub public.</p>
+                        <p className="text-sm text-slate-500">Vérifiez que vos dossiers <b>im_real</b> et <b>im_ia</b> existent sur votre dépôt GitHub public.</p>
                     </div>
                 </div>
             );
