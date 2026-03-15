@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Detection Study | Protocol</title>
+    <title>Étude Détection IA</title>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -28,36 +28,23 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- CONFIGURATION DYNAMIQUE DES IMAGES ---
-        // Modifiez ces valeurs selon votre dossier GitHub
-        const NB_IMAGES_REEL = 5;  // Nombre d'images dans im_reel/
-        const NB_IMAGES_IA = 5;    // Nombre d'images dans im_ia/
-        const EXTENSION = ".jpg";  // Extension de vos fichiers (.jpg, .png, etc.)
+        // --- CONFIGURATION GITHUB ---
+        // vide pour une détection automatique sur GitHub Pages
+        // si  test ailleurs (ex: "nom/depot")
+        const REPO_PATH = ""; 
 
-        const IMAGES_REEL = Array.from({ length: NB_IMAGES_REEL }, (_, i) => ({
-            url: `im_reel/img${i + 1}${EXTENSION}`, 
-            type: "Réelle"
-        }));
-
-        const IMAGES_IA = Array.from({ length: NB_IMAGES_IA }, (_, i) => ({
-            url: `im_ia/img${i + 1}${EXTENSION}`, 
-            type: "IA"
-        }));
-
-        // URL DE VOTRE GOOGLE APPS SCRIPT
-        const SCRIPT_URL = "REMPLACEZ_PAR_VOTRE_URL_SCRIPT";
+        // URL GOOGLE APPS SCRIPT
+        const SCRIPT_URL = "https://teams.microsoft.com/l/message/48:notes/1773587805720?context=%7B%22contextType%22%3A%22chat%22%2C%22oid%22%3A%228%3Aorgid%3Ac7218114-d499-46f8-851b-253b338b4dde%22%7D";
 
         const REASONS = ["Lumière", "Textures", "Anatomie", "Arrière-plan", "Artéfacts", "Cohérence", "Autre"];
 
-        // --- ICONES ---
         const Icons = {
             Brain: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .52 5.886 3 3 0 1 0 5.174 3.09 3 3 0 1 0 5.174-3.09 4 4 0 0 0 .52-5.886 4 4 0 0 0-2.526-5.77A3 3 0 0 0 12 5z"/></svg>,
-            User: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             Clock: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         };
 
         function App() {
-            const [screen, setScreen] = useState('intro');
+            const [screen, setScreen] = useState('loading');
             const [userData, setUserData] = useState({ email: '', age: '', genre: 'Homme', domaine: '' });
             const [testImages, setTestImages] = useState([]);
             const [currentIdx, setCurrentIdx] = useState(0);
@@ -67,10 +54,47 @@
             const [confidence, setConfidence] = useState(50);
             const [startTime, setStartTime] = useState(null);
 
-            // Mélange les images au début
+            // CHARGEMENT DYNAMIQUE VIA API GITHUB
             useEffect(() => {
-                const all = [...IMAGES_REEL, ...IMAGES_IA].sort(() => Math.random() - 0.5);
-                setTestImages(all);
+                async function loadImages() {
+                    try {
+                        let repo = REPO_PATH;
+                        
+                        // Détection auto du repo si on est sur GitHub Pages
+                        if (!repo && window.location.hostname.includes('github.io')) {
+                            const owner = window.location.hostname.split('.')[0];
+                            const name = window.location.pathname.split('/')[1];
+                            repo = `${owner}/${name}`;
+                        }
+
+                        if (!repo) {
+                            console.error("Impossible de détecter le dépôt GitHub.");
+                            setScreen('error');
+                            return;
+                        }
+
+                        const fetchFolder = async (path, type) => {
+                            const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`);
+                            const files = await res.json();
+                            return files
+                                .filter(f => f.type === "file" && /\.(jpe?g|png|webp)$/i.test(f.name))
+                                .map(f => ({ url: f.download_url, type }));
+                        };
+
+                        const [reelles, ia] = await Promise.all([
+                            fetchFolder('im_reel', 'Réelle'),
+                            fetchFolder('im_ia', 'IA')
+                        ]);
+
+                        const all = [...reelles, ...ia].sort(() => Math.random() - 0.5);
+                        setTestImages(all);
+                        setScreen('intro');
+                    } catch (err) {
+                        console.error("Erreur de chargement:", err);
+                        setScreen('error');
+                    }
+                }
+                loadImages();
             }, []);
 
             // Timer
@@ -107,7 +131,6 @@
                     confidence: confidence
                 };
 
-                // Envoi au Google Sheet
                 fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
 
                 if (currentIdx < testImages.length - 1) {
@@ -121,6 +144,21 @@
                     setScreen('finish');
                 }
             };
+
+            if (screen === 'loading') return (
+                <div className="min-h-screen flex items-center justify-center font-bold text-slate-400 animate-pulse">
+                    Chargement des images depuis GitHub...
+                </div>
+            );
+
+            if (screen === 'error') return (
+                <div className="min-h-screen flex items-center justify-center p-6 text-center">
+                    <div className="max-w-md bg-white grid-ui p-8 rounded-2xl">
+                        <h2 className="text-red-500 font-bold mb-2">Erreur de configuration</h2>
+                        <p className="text-sm text-slate-500">Vérifiez que vos dossiers <b>im_reel</b> et <b>im_ia</b> existent sur votre dépôt GitHub public.</p>
+                    </div>
+                </div>
+            );
 
             if (screen === 'intro') return (
                 <div className="min-h-screen flex items-center justify-center p-6">
@@ -150,7 +188,7 @@
                                 <label className="text-[11px] font-bold text-slate-400 uppercase mb-1 block">Domaine d'expertise</label>
                                 <input type="text" value={userData.domaine} onChange={e => setUserData({...userData, domaine: e.target.value})} className="w-full px-4 py-3 bg-slate-50 grid-ui rounded-xl outline-none" placeholder="Design, IA, Photo..." />
                             </div>
-                            <button onClick={handleStart} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 mt-4">Commencer le Test</button>
+                            <button onClick={handleStart} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 mt-4">Commencer ({testImages.length} images)</button>
                         </div>
                     </div>
                 </div>
