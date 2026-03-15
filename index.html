@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Étude Détection IA</title>
+    <title>AI Detection Study </title>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -28,12 +28,8 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- CONFIGURATION GITHUB ---
-        // vide pour une détection automatique sur GitHub Pages
-        // si  test ailleurs (ex: "nom/depot")
-        const REPO_PATH = ""; 
+        const REPO_PATH = "mbs-tl/Etude-Detection-IA"; 
 
-        // URL GOOGLE APPS SCRIPT
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOz9VHX_3zUCEvW3hJimSMK8s0xj-IhK8QW4FoXDFZmdBbtM51o1-Rr3_LcUpgXAY/exec";
 
         const REASONS = ["Lumière", "Textures", "Anatomie", "Arrière-plan", "Artéfacts", "Cohérence", "Autre"];
@@ -54,27 +50,12 @@
             const [confidence, setConfidence] = useState(50);
             const [startTime, setStartTime] = useState(null);
 
-            // CHARGEMENT DYNAMIQUE VIA API GITHUB
             useEffect(() => {
                 async function loadImages() {
                     try {
-                        let repo = REPO_PATH;
-                        
-                        // Détection auto du repo si on est sur GitHub Pages
-                        if (!repo && window.location.hostname.includes('github.io')) {
-                            const owner = window.location.hostname.split('.')[0];
-                            const name = window.location.pathname.split('/')[1];
-                            repo = `${owner}/${name}`;
-                        }
-
-                        if (!repo) {
-                            console.error("Impossible de détecter le dépôt GitHub.");
-                            setScreen('error');
-                            return;
-                        }
-
                         const fetchFolder = async (path, type) => {
-                            const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`);
+                            const res = await fetch(`https://api.github.com/repos/${REPO_PATH}/contents/${path}`);
+                            if (!res.ok) throw new Error(`FOLDER_NOT_FOUND: ${path}`);
                             const files = await res.json();
                             return files
                                 .filter(f => f.type === "file" && /\.(jpe?g|png|webp)$/i.test(f.name))
@@ -86,18 +67,19 @@
                             fetchFolder('im_ia', 'IA')
                         ]);
 
+                        if (reelles.length === 0 && ia.length === 0) throw new Error("NO_IMAGES");
+
                         const all = [...reelles, ...ia].sort(() => Math.random() - 0.5);
                         setTestImages(all);
                         setScreen('intro');
                     } catch (err) {
-                        console.error("Erreur de chargement:", err);
+                        console.error("Détails de l'erreur:", err.message);
                         setScreen('error');
                     }
                 }
                 loadImages();
             }, []);
 
-            // Timer
             useEffect(() => {
                 let timer;
                 if (screen === 'test') {
