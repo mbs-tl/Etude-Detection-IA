@@ -3,267 +3,445 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POUVEZ-VOUS ARRÊTER L'IA ? </title>
-
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>Étude de Perception - Détection d'Images IA</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #f8fafc; 
-            color: #0f172a;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.05) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(79, 70, 229, 0.05) 0px, transparent 50%);
-            background-attachment: fixed;
-        }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .grid-ui { border: 1px solid #e2e8f0; }
-        .display-title { 
-            font-family: 'Anton', sans-serif; 
-            text-transform: uppercase; 
-            letter-spacing: 0.02em;
-            line-height: 1.1;
-        }
-        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -7px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-in { animation: fadeIn 0.4s ease-out forwards; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="bg-zinc-50 text-zinc-900 min-h-screen flex items-center justify-center p-4" x-data="testApp()">
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+    <!-- CHARGEMENT / ERREUR -->
+    <template x-if="screen === 'loading'">
+        <div class="text-center">
+            <div class="animate-spin h-12 w-12 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-zinc-600 font-medium">Chargement des ressources...</p>
+        </div>
+    </template>
 
-        const REPO_PATH = "mbs-tl/Etude-Detection-IA"; 
+    <template x-if="screen === 'error'">
+        <div class="text-center p-8 bg-white rounded-3xl shadow-xl border border-zinc-100 overflow-hidden max-w-md">
+            <i data-lucide="alert-circle" class="w-12 h-12 text-red-500 mx-auto mb-4"></i>
+            <p class="text-zinc-800 font-medium" x-text="errorMessage"></p>
+            <button @click="window.location.reload()" class="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 px-8">Réessayer</button>
+        </div>
+    </template>
 
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOz9VHX_3zUCEvW3hJimSMK8s0xj-IhK8QW4FoXDFZmdBbtM51o1-Rr3_LcUpgXAY/exec";
+    <!-- INTRODUCTION -->
+    <template x-if="screen === 'intro'">
+        <div class="w-full max-w-6xl bg-white rounded-3xl shadow-xl border border-zinc-100 overflow-hidden flex flex-col md:flex-row">
+            <div class="md:w-1/2 p-8 md:p-12 bg-indigo-600 text-white flex flex-col justify-center">
+                <div class="flex items-center gap-3 mb-8">
+                    <i data-lucide="brain-circuit" class="w-10 h-10"></i>
+                    <h1 class="text-3xl font-bold">Étude de Perception</h1>
+                </div>
+                <div class="space-y-6 text-indigo-100">
+                    <div class="bg-indigo-700/50 p-6 rounded-2xl border border-indigo-400/30">
+                        <h2 class="text-white font-bold mb-3 flex items-center gap-2"><i data-lucide="info" class="w-5 h-5"></i> Votre tâche</h2>
+                        <p class="text-sm leading-relaxed">
+                            Vous allez voir des images. Votre tâche est de dire si l’image est <b>réelle</b> ou <b>générée/modifiée par une IA</b>.<br /><br />
+                            Faites de votre mieux. Il n’y a aucune bonne ou mauvaise réponse individuelle : nous étudions des tendances globales.
+                        </p>
+                    </div>
+                    <div class="space-y-4">
+                        <h2 class="text-white font-bold flex items-center gap-2"><i data-lucide="clipboard-check" class="w-5 h-5"></i> Consignes</h2>
+                        <ul class="text-sm space-y-3">
+                            <li class="flex items-start gap-3"><span class="bg-white/20 px-2 rounded">1</span> <span>Identifiez si l'image est réelle ou générée par IA.</span></li>
+                            <li class="flex items-start gap-3"><span class="bg-white/20 px-2 rounded">2</span> <span>Vous avez 30 secondes par image.</span></li>
+                            <li class="flex items-start gap-3"><span class="bg-white/20 px-2 rounded">3</span> <span>Cliquez sur "Répondre" dès que vous avez une idée. L'image disparaîtra alors.</span></li>
+                        </ul>
+                    </div>
+                    <p class="text-xs italic opacity-70 mt-8">Tout sera anonymisé ! Votre mail sert uniquement à la validation.</p>
+                </div>
+            </div>
 
-        const REASONS = ["Lumière", "Textures", "Anatomie", "Arrière-plan", "Artéfacts", "Cohérence", "Autre"];
+            <div class="md:w-1/2 p-8 md:p-12 overflow-y-auto max-h-[90vh]">
+                <h2 class="text-2xl font-bold mb-6">Questionnaire initial</h2>
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">E-mail</label>
+                            <input type="email" x-model="userData.email" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition-all" placeholder="votre@email.com">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Âge</label>
+                            <input type="number" x-model="userData.age" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition-all" placeholder="Ex: 25">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Sexe</label>
+                            <select x-model="userData.sex" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition-all">
+                                <option value="Homme">Homme</option>
+                                <option value="Femme">Femme</option>
+                                <option value="Autre">Autre</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Expertise</label>
+                            <input type="text" x-model="userData.expertise" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition-all" placeholder="Ex: Data">
+                        </div>
+                    </div>
 
-        const Icons = {
-            Brain: () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .52 5.886 3 3 0 1 0 5.174 3.09 3 3 0 1 0 5.174-3.09 4 4 0 0 0 .52-5.886 4 4 0 0 0-2.526-5.77A3 3 0 0 0 12 5z"/></svg>,
-            Clock: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        };
+                    <hr class="border-zinc-100">
+                    <p class="text-sm font-bold text-indigo-600">Au cours des dernières 24 heures...</p>
 
-        function App() {
-            const [screen, setScreen] = useState('loading');
-            const [userData, setUserData] = useState({ email: '', age: '', genre: 'Homme', domaine: '' });
-            const [testImages, setTestImages] = useState([]);
-            const [currentIdx, setCurrentIdx] = useState(0);
-            const [timeLeft, setTimeLeft] = useState(20);
-            const [prediction, setPrediction] = useState(null);
-            const [selectedReasons, setSelectedReasons] = useState([]);
-            const [confidence, setConfidence] = useState(50);
-            const [startTime, setStartTime] = useState(null);
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Sommeil suffisant ? (0-10)</label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" min="0" max="10" x-model="userData.sleep" class="flex-1 h-2 bg-zinc-100 rounded-lg appearance-none cursor-pointer">
+                                <span class="w-8 text-center font-bold text-indigo-600" x-text="userData.sleep"></span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Alcool ?</label>
+                                <select x-model="userData.alcohol" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition-all">
+                                    <option value="non">Non</option>
+                                    <option value="oui">Oui</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Médocs ?</label>
+                                <select x-model="userData.meds" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition-all">
+                                    <option value="non">Non</option>
+                                    <option value="oui">Oui</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Niveau de fatigue ? (0-10)</label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" min="0" max="10" x-model="userData.fatigue" class="flex-1 h-2 bg-zinc-100 rounded-lg appearance-none cursor-pointer">
+                                <span class="w-8 text-center font-bold text-indigo-600" x-text="userData.fatigue"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Niveau de concentration ? (0-10)</label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" min="0" max="10" x-model="userData.focus" class="flex-1 h-2 bg-zinc-100 rounded-lg appearance-none cursor-pointer">
+                                <span class="w-8 text-center font-bold text-indigo-600" x-text="userData.focus"></span>
+                            </div>
+                        </div>
+                    </div>
 
-            useEffect(() => {
-                async function loadImages() {
+                    <button @click="startTest()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95">
+                        Valider et Commencer <i data-lucide="play" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- TEST -->
+    <template x-if="screen === 'test'">
+        <div class="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="relative">
+                <div class="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4 text-zinc-600"></i>
+                    <span class="font-mono font-bold" x-text="timeLeft + 's'"></span>
+                </div>
+                <div class="aspect-[4/3] rounded-3xl overflow-hidden bg-zinc-200 shadow-2xl border-4 border-white flex items-center justify-center">
+                    <template x-if="!isResponding">
+                        <img :src="currentImage.url" class="w-full h-full object-cover" alt="Test">
+                    </template>
+                    <template x-if="isResponding">
+                        <div class="text-zinc-400 flex flex-col items-center gap-2">
+                            <i data-lucide="eye-off" class="w-12 h-12"></i>
+                            <span class="font-bold uppercase tracking-widest text-xs">Image Masquée</span>
+                        </div>
+                    </template>
+                </div>
+                <div class="mt-4 flex justify-between items-center px-2">
+                    <span class="text-sm font-medium text-zinc-400" x-text="'Image ' + (currentIdx + 1) + ' / ' + images.length"></span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl border border-zinc-100 overflow-hidden p-8 flex flex-col min-h-[500px]">
+                <template x-if="!isResponding">
+                    <div class="flex-1 flex flex-col justify-center items-center text-center space-y-6">
+                        <h3 class="text-2xl font-bold">Analysez l'image</h3>
+                        <p class="text-zinc-500">Cliquez sur le bouton dès que vous êtes prêt à donner votre avis.</p>
+                        <button @click="handleRespondClick()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-6 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 text-xl">Répondre</button>
+                    </div>
+                </template>
+
+                <template x-if="isResponding">
+                    <div class="flex-1 flex flex-col">
+                        <template x-if="isKnowledgeCheck">
+                            <div class="flex-1 flex flex-col justify-center text-center">
+                                <h3 class="text-xl font-bold mb-6">Connaissez-vous cette image ?</h3>
+                                <div class="grid grid-cols-1 gap-4">
+                                    <button @click="handleKnowledge(true)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95">Oui, je la connais</button>
+                                    <button @click="handleKnowledge(false)" class="bg-white border-2 border-zinc-100 hover:border-zinc-200 text-zinc-600 font-bold py-4 rounded-2xl transition-all active:scale-95">Non, jamais vue</button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="!isKnowledgeCheck">
+                            <div class="flex-1 flex flex-col">
+                                <h2 class="text-xl font-bold mb-6">Réelle ou IA ?</h2>
+                                <div class="grid grid-cols-2 gap-4 mb-8">
+                                    <button @click="prediction = 'Réelle'" :class="prediction === 'Réelle' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-zinc-100 text-zinc-400'" class="py-4 rounded-2xl font-bold border-2 transition-all">Réelle</button>
+                                    <button @click="prediction = 'IA'" :class="prediction === 'IA' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-zinc-100 text-zinc-400'" class="py-4 rounded-2xl font-bold border-2 transition-all">IA</button>
+                                </div>
+
+                                <template x-if="prediction === 'IA'">
+                                    <div class="mb-8">
+                                        <p class="text-sm font-bold mb-3 text-zinc-500 uppercase">Pourquoi ?</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            <template x-for="r in reasons" :key="r.id">
+                                                <button @click="toggleReason(r.label)" :class="selectedReasons.includes(r.label) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-zinc-50 text-zinc-600 border-zinc-200'" class="px-3 py-2 rounded-xl text-xs font-medium border transition-colors" x-text="r.label"></button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <div class="space-y-4 mb-8">
+                                    <div class="flex justify-between items-center text-sm font-bold">
+                                        <label class="text-zinc-500 uppercase">Confiance</label>
+                                        <span class="text-indigo-600" x-text="confidence + '%'"></span>
+                                    </div>
+                                    <input type="range" min="0" max="100" x-model="confidence" class="w-full h-2 bg-zinc-100 rounded-lg appearance-none cursor-pointer">
+                                </div>
+
+                                <button @click="nextImage()" class="mt-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95">
+                                    Suivant <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <!-- SURVEY -->
+    <template x-if="screen === 'survey'">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-zinc-100 overflow-hidden p-8">
+            <h2 class="text-2xl font-bold mb-8 text-center">Quelques questions finales</h2>
+            <div class="space-y-8">
+                <div>
+                    <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block block mb-4">Avez-vous trouvé ce test :</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <template x-for="opt in ['Facile', 'Moyenne', 'Difficile']">
+                            <button @click="surveyData.difficulty = opt" :class="surveyData.difficulty === opt ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-zinc-100 text-zinc-400'" class="py-3 rounded-xl text-sm font-bold border-2 transition-all" x-text="opt"></button>
+                        </template>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block block mb-4">Avez-vous eu suffisamment de temps ?</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <template x-for="opt in ['Oui', 'Non']">
+                            <button @click="surveyData.enoughTime = opt" :class="surveyData.enoughTime === opt ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-zinc-100 text-zinc-400'" class="py-3 rounded-xl text-sm font-bold border-2 transition-all" x-text="opt"></button>
+                        </template>
+                    </div>
+                </div>
+                <button @click="finishTest()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 mt-4">Terminer l'étude</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- FINISH -->
+    <template x-if="screen === 'finish'">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-zinc-100 overflow-hidden p-12 text-center">
+            <i data-lucide="check-circle-2" class="w-16 h-16 text-emerald-500 mx-auto mb-6"></i>
+            <h2 class="text-3xl font-bold mb-4">Terminé !</h2>
+            <p class="text-zinc-500 mb-8">Merci pour votre précieuse contribution à cette étude scientifique.</p>
+            <button @click="window.location.reload()" class="w-full bg-white border-2 border-zinc-100 hover:border-zinc-200 text-zinc-600 font-bold py-4 rounded-2xl transition-all active:scale-95">Recommencer</button>
+        </div>
+    </template>
+
+    <script>
+        function testApp() {
+            return {
+                screen: 'loading',
+                errorMessage: '',
+                REPO_PATH: "mbs-tl/Detection_IA_v0",
+                SCRIPT_URL_RESULTS: "https://script.google.com/macros/s/AKfycbIv2QgH6vGyC6YZ4ecA2rlZ5jxG4gloXzWhr7yCpupw9p4GdCxJi10xlFozPr_qNDVxg/exec",
+                SCRIPT_URL_USER: "https://script.google.com/macros/s/AKfycbxN8gMFAr9IUQf9JbN0HauncanvataWBRyClyfr96c48sp_x-UvwNQyXid86u2ZdRb0Jg/exec",
+                
+                userData: { email: '', age: '', sex: 'Homme', expertise: '', sleep: 5, alcohol: 'non', meds: 'non', fatigue: 5, focus: 5 },
+                surveyData: { difficulty: 'Moyenne', enoughTime: 'Oui' },
+                
+                images: [],
+                poolReal: [],
+                poolIA: [],
+                currentIdx: 0,
+                timeLeft: 30,
+                timer: null,
+                isResponding: false,
+                isKnowledgeCheck: true,
+                prediction: null,
+                selectedReasons: [],
+                confidence: 50,
+                startTime: null,
+                responseTime: null,
+                
+                reasons: [
+                    { id: 'lighting', label: 'Éclairage' }, { id: 'background', label: 'Arrière-plan' },
+                    { id: 'anatomy', label: 'Anatomie' }, { id: 'objects', label: 'Objets' },
+                    { id: 'cohesiveness', label: 'Cohérence' }, { id: 'textures', label: 'Textures' },
+                    { id: 'other', label: 'Autre' }
+                ],
+
+                init() {
+                    this.fetchImages();
+                },
+
+                async fetchImages() {
                     try {
                         const fetchFolder = async (path, type) => {
-                            const res = await fetch(`https://api.github.com/repos/${REPO_PATH}/contents/${path}`);
-                            if (!res.ok) throw new Error(`FOLDER_NOT_FOUND: ${path}`);
+                            const res = await fetch(`https://api.github.com/repos/${this.REPO_PATH}/contents/${path}`);
+                            if (!res.ok) throw new Error(`Dossier ${path} non trouvé`);
                             const files = await res.json();
                             return files
-                                .filter(f => f.type === "file" && /\.(jpe?g|png|webp)$/i.test(f.name))
+                                .filter(f => /\.(jpe?g|png|webp)$/i.test(f.name))
                                 .map(f => ({ url: f.download_url, type }));
                         };
 
-                        const [reelles, ia] = await Promise.all([
+                        const [reelles, ia, r_reelles, r_ia] = await Promise.all([
                             fetchFolder('im_real', 'Réelle'),
-                            fetchFolder('im_ia', 'IA')
+                            fetchFolder('im_ia', 'IA'),
+                            fetchFolder('remplacement_im_real', 'Réelle'),
+                            fetchFolder('remplacement_im_ia', 'IA')
                         ]);
 
-                        if (reelles.length === 0 && ia.length === 0) throw new Error("NO_IMAGES");
-
-                        const all = [...reelles, ...ia].sort(() => Math.random() - 0.5);
-                        setTestImages(all);
-                        setScreen('intro');
+                        this.images = [...reelles, ...ia].sort(() => Math.random() - 0.5);
+                        this.poolReal = r_reelles.map(img => img.url).sort(() => Math.random() - 0.5);
+                        this.poolIA = r_ia.map(img => img.url).sort(() => Math.random() - 0.5);
+                        this.screen = 'intro';
+                        this.$nextTick(() => lucide.createIcons());
                     } catch (err) {
-                        console.error("Détails de l'erreur:", err.message);
-                        setScreen('error');
+                        this.errorMessage = err.message;
+                        this.screen = 'error';
+                        this.$nextTick(() => lucide.createIcons());
                     }
-                }
-                loadImages();
-            }, []);
+                },
 
-            useEffect(() => {
-                let timer;
-                if (screen === 'test') {
-                    timer = setInterval(() => {
-                        setTimeLeft(prev => {
-                            if (prev <= 1) { handleNext(true); return 20; }
-                            return prev - 1;
-                        });
+                startTest() {
+                    if (!this.userData.email || !this.userData.age) return alert("Veuillez remplir les champs obligatoires.");
+                    this.screen = 'test';
+                    this.startTimer();
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                startTimer() {
+                    if (this.timer) clearInterval(this.timer);
+                    this.timeLeft = 30;
+                    this.startTime = Date.now();
+                    this.timer = setInterval(() => {
+                        this.timeLeft--;
+                        if (this.timeLeft <= 0) {
+                            clearInterval(this.timer);
+                            this.nextImage(true);
+                        }
                     }, 1000);
+                },
+
+                handleRespondClick() {
+                    this.responseTime = (Date.now() - this.startTime) / 1000;
+                    this.isResponding = true;
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                handleKnowledge(known) {
+                    if (known) {
+                        const type = this.currentImage.type;
+                        const pool = type === 'Réelle' ? this.poolReal : this.poolIA;
+                        const newUrl = pool.pop();
+                        if (newUrl) {
+                            this.images[this.currentIdx].url = newUrl;
+                            // Reset to Phase 1 for the replacement image
+                            this.isResponding = false;
+                            this.isKnowledgeCheck = false; // On saute la vérification pour l'image de remplacement
+                            this.startTimer();
+                            this.$nextTick(() => lucide.createIcons());
+                            return;
+                        }
+                    }
+                    this.isKnowledgeCheck = false;
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                toggleReason(label) {
+                    if (this.selectedReasons.includes(label)) {
+                        this.selectedReasons = this.selectedReasons.filter(r => r !== label);
+                    } else {
+                        this.selectedReasons.push(label);
+                    }
+                },
+
+                nextImage(isTimeout = false) {
+                    if (!isTimeout && !this.prediction && this.isResponding && !this.isKnowledgeCheck) return alert("Veuillez choisir Réelle ou IA");
+                    
+                    this.saveResult(isTimeout ? "Pas de réponse" : (this.prediction || "Pas de réponse"));
+                    
+                    if (this.currentIdx + 1 >= this.images.length) {
+                        clearInterval(this.timer);
+                        this.screen = 'survey';
+                    } else {
+                        this.currentIdx++;
+                        this.prediction = null;
+                        this.selectedReasons = [];
+                        this.confidence = 50;
+                        this.isKnowledgeCheck = true;
+                        this.isResponding = false;
+                        this.responseTime = null;
+                        this.startTimer();
+                    }
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                saveResult(pred) {
+                    const data = {
+                        date: new Date().toLocaleString('fr-FR'),
+                        email: this.userData.email,
+                        age: this.userData.age,
+                        genre: this.userData.sex,
+                        domaine: this.userData.expertise,
+                        img_url: this.currentImage.url,
+                        type: this.currentImage.type,
+                        prediction: pred,
+                        temps_rep: this.responseTime ? this.responseTime.toFixed(2) : "30.00",
+                        raison: this.selectedReasons.join(', '),
+                        confiance: this.confidence
+                    };
+
+                    fetch(this.SCRIPT_URL_RESULTS, {
+                        method: "POST",
+                        mode: 'no-cors',
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data)
+                    });
+                },
+
+                finishTest() {
+                    const finalData = {
+                        ...this.userData,
+                        difficulty: this.surveyData.difficulty,
+                        enoughTime: this.surveyData.enoughTime
+                    };
+
+                    fetch(this.SCRIPT_URL_USER, {
+                        method: "POST",
+                        mode: 'no-cors',
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(finalData)
+                    });
+
+                    this.screen = 'finish';
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                get currentImage() {
+                    return this.images[this.currentIdx] || { url: '', type: '' };
                 }
-                return () => clearInterval(timer);
-            }, [screen, currentIdx]);
-
-            const handleStart = () => {
-                if (!userData.email || !userData.age || !userData.domaine) return alert("Veuillez remplir tous les champs.");
-                setScreen('test');
-                setStartTime(Date.now());
-            };
-
-            const handleNext = async (isTimeout = false) => {
-                const endTime = Date.now();
-                const responseTime = ((endTime - startTime) / 1000).toFixed(2);
-
-                const payload = {
-                    ...userData,
-                    imageUrl: testImages[currentIdx].url,
-                    actualType: testImages[currentIdx].type,
-                    prediction: isTimeout ? "Pas de réponse" : prediction,
-                    responseTime: responseTime,
-                    reasons: selectedReasons.join(', '),
-                    confidence: confidence
-                };
-
-                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-
-                if (currentIdx < testImages.length - 1) {
-                    setCurrentIdx(prev => prev + 1);
-                    setPrediction(null);
-                    setSelectedReasons([]);
-                    setConfidence(50);
-                    setTimeLeft(20);
-                    setStartTime(Date.now());
-                } else {
-                    setScreen('finish');
-                }
-            };
-
-            if (screen === 'loading') return (
-                <div className="min-h-screen flex items-center justify-center font-bold text-slate-400 animate-pulse">
-                    Chargement des images depuis GitHub...
-                </div>
-            );
-
-            if (screen === 'error') return (
-                <div className="min-h-screen flex items-center justify-center p-6 text-center">
-                    <div className="max-w-md bg-white grid-ui p-8 rounded-2xl">
-                        <h2 className="text-red-500 font-bold mb-2">Erreur de configuration</h2>
-                        <p className="text-sm text-slate-500">Vérifiez que vos dossiers <b>im_real</b> et <b>im_ia</b> existent sur votre dépôt GitHub public.</p>
-                    </div>
-                </div>
-            );
-
-            if (screen === 'intro') return (
-                <div className="min-h-screen flex items-center justify-center p-6">
-                    <div className="w-full max-w-md bg-white grid-ui rounded-2xl shadow-sm p-8 animate-in">
-                        <div className="flex flex-col items-center text-center mb-8">
-                            <div className="relative w-24 h-24 mb-6">
-                                <div className="absolute inset-0 bg-indigo-600 rounded-2xl rotate-6 opacity-20 animate-pulse"></div>
-                                <div className="absolute inset-0 bg-indigo-600 rounded-2xl -rotate-3 opacity-20 animate-pulse" style={{animationDelay: '0.5s'}}></div>
-                                <div className="relative bg-indigo-600 text-white rounded-2xl w-full h-full flex items-center justify-center shadow-lg shadow-indigo-200 border-2 border-white">
-                                    <Icons.Brain />
-                                </div>
-                            </div>
-                            <h1 className="text-4xl display-title text-slate-900">POUVEZ-VOUS<br/><span className="text-indigo-600">ARRÊTER L'IA ?</span></h1>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Protocol de Détection v1.0</p>
-                        </div>
-                        <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <h3 className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-2 text-center">Consignes du test</h3>
-                            <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside">
-                                <li>Examinez chaque image attentivement.</li>
-                                <li>Déterminez si elle est <b>Réelle</b> ou générée par une <b>IA</b>.</li>
-                                <li>Vous avez <b>20 secondes</b> par image.</li>
-                                <li>Indiquez votre niveau de confiance pour chaque réponse.</li>
-                            </ul>
-                        </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase mb-1 block">Email</label>
-                                <input type="email" value={userData.email} onChange={e => setUserData({...userData, email: e.target.value})} className="w-full px-4 py-3 bg-slate-50 grid-ui rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="votre@email.com" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1 block">Âge</label>
-                                    <input type="number" value={userData.age} onChange={e => setUserData({...userData, age: e.target.value})} className="w-full px-4 py-3 bg-slate-50 grid-ui rounded-xl outline-none" placeholder="25" />
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-slate-400 uppercase mb-1 block">Genre</label>
-                                    <select value={userData.genre} onChange={e => setUserData({...userData, genre: e.target.value})} className="w-full px-4 py-3 bg-slate-50 grid-ui rounded-xl outline-none">
-                                        <option>Homme</option><option>Femme</option><option>Autre</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase mb-1 block">Domaine d'expertise</label>
-                                <input type="text" value={userData.domaine} onChange={e => setUserData({...userData, domaine: e.target.value})} className="w-full px-4 py-3 bg-slate-50 grid-ui rounded-xl outline-none" placeholder="Design, IA, Photo..." />
-                            </div>
-                            <button onClick={handleStart} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 mt-4">Commencer ({testImages.length} images)</button>
-                        </div>
-                    </div>
-                </div>
-            );
-
-            if (screen === 'test') return (
-                <div className="min-h-screen flex items-center justify-center p-6">
-                    <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-10 animate-in">
-                        <div className="space-y-4">
-                            <div className="relative bg-slate-200 rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
-                                <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg grid-ui flex items-center gap-2">
-                                    <Icons.Clock /> <span className="mono text-sm font-bold">{timeLeft}s</span>
-                                </div>
-                                <img src={testImages[currentIdx].url} className="w-full aspect-[4/3] object-contain bg-slate-900" />
-                            </div>
-                            <div className="flex justify-between items-end">
-                                <div>
-                                    <h2 className="display-title text-2xl text-slate-900">POUVEZ-VOUS ARRÊTER L'IA ?</h2>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Image {currentIdx + 1} / {testImages.length}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-white grid-ui rounded-2xl p-8 flex flex-col shadow-sm">
-                            <h2 className="text-lg font-bold mb-8">Classification</h2>
-                            <div className="grid grid-cols-2 gap-4 mb-8">
-                                <button onClick={() => setPrediction('Réelle')} className={`py-6 rounded-xl font-bold border-2 transition-all ${prediction === 'Réelle' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-transparent text-slate-400'}`}>Réelle</button>
-                                <button onClick={() => setPrediction('IA')} className={`py-6 rounded-xl font-bold border-2 transition-all ${prediction === 'IA' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-slate-50 border-transparent text-slate-400'}`}>IA</button>
-                            </div>
-                            
-                            {prediction === 'IA' && (
-                                <div className="mb-8 animate-in">
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase mb-3">Pourquoi ?</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {REASONS.map(r => (
-                                            <button key={r} onClick={() => setSelectedReasons(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])} className={`px-3 py-2 rounded-lg text-xs border transition-all ${selectedReasons.includes(r) ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-600'}`}>{r}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            <div className="mb-10">
-                                <div className="flex justify-between mb-2"><span className="text-[11px] font-bold text-slate-400 uppercase">Confiance</span><span className="mono text-xs font-bold text-indigo-600">{confidence}%</span></div>
-                                <input type="range" min="0" max="100" value={confidence} onChange={e => setConfidence(e.target.value)} />
-                            </div>
-                            <button onClick={() => handleNext()} className="mt-auto w-full bg-slate-900 text-white font-bold py-4 rounded-xl">Valider</button>
-                        </div>
-                    </div>
-                </div>
-            );
-
-            return (
-                <div className="min-h-screen flex items-center justify-center p-6 text-center">
-                    <div className="max-w-md bg-white grid-ui p-12 rounded-2xl shadow-sm animate-in">
-                        <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">✓</div>
-                        <h2 className="text-2xl font-bold mb-4">Terminé !</h2>
-                        <p className="text-slate-500 mb-8">Vos données ont été transmises à la base de recherche.</p>
-                        <button onClick={() => window.location.reload()} className="w-full bg-slate-100 py-4 rounded-xl font-bold">Nouvelle Session</button>
-                    </div>
-                </div>
-            );
+            }
         }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
     </script>
 </body>
 </html>
