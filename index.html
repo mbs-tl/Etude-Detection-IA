@@ -90,40 +90,24 @@
 
                     <div class="space-y-4">
                         <div>
-                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Sommeil suffisant ? (0-10)</label>
-                            <div class="flex items-center gap-4">
-                                <input type="range" min="0" max="10" x-model="userData.sleep" class="flex-1 h-2 bg-zinc-100 rounded-lg appearance-none cursor-pointer">
-                                <span class="w-8 text-center font-bold text-indigo-600" x-text="userData.sleep"></span>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Alcool ?</label>
-                                <select x-model="userData.alcohol" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition-all">
-                                    <option value="non">Non</option>
-                                    <option value="oui">Oui</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Médocs ?</label>
-                                <select x-model="userData.meds" class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white transition-all">
-                                    <option value="non">Non</option>
-                                    <option value="oui">Oui</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Niveau de fatigue ? (0-10)</label>
-                            <div class="flex items-center gap-4">
-                                <input type="range" min="0" max="10" x-model="userData.fatigue" class="flex-1 h-2 bg-zinc-100 rounded-lg appearance-none cursor-pointer">
-                                <span class="w-8 text-center font-bold text-indigo-600" x-text="userData.fatigue"></span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Niveau de concentration ? (0-10)</label>
-                            <div class="flex items-center gap-4">
-                                <input type="range" min="0" max="10" x-model="userData.focus" class="flex-1 h-2 bg-zinc-100 rounded-lg appearance-none cursor-pointer">
-                                <span class="w-8 text-center font-bold text-indigo-600" x-text="userData.focus"></span>
+                            <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 block leading-relaxed">
+                                Auriez-vous été sujet à l’une de ces situations au cours des dernières 24h : manque de sommeil, consommation de substances, dépression, ..... ?
+                            </label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <button 
+                                    @click="userData.recentIssues = 'oui'" 
+                                    :class="userData.recentIssues === 'oui' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-zinc-100 text-zinc-400'" 
+                                    class="py-3 rounded-xl text-sm font-bold border-2 transition-all"
+                                >
+                                    Oui
+                                </button>
+                                <button 
+                                    @click="userData.recentIssues = 'non'" 
+                                    :class="userData.recentIssues === 'non' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-zinc-100 text-zinc-400'" 
+                                    class="py-3 rounded-xl text-sm font-bold border-2 transition-all"
+                                >
+                                    Non
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -261,10 +245,10 @@
                 screen: 'loading',
                 errorMessage: '',
                 REPO_PATH: "mbs-tl/Detection_IA_v0",
-                SCRIPT_URL_RESULTS: "https://script.google.com/macros/s/AKfycbIv2QgH6vGyC6YZ4ecA2rlZ5jxG4gloXzWhr7yCpupw9p4GdCxJi10xlFozPr_qNDVxg/exec",
-                SCRIPT_URL_USER: "https://script.google.com/macros/s/AKfycbxN8gMFAr9IUQf9JbN0HauncanvataWBRyClyfr96c48sp_x-UvwNQyXid86u2ZdRb0Jg/exec",
+                SCRIPT_URL_RESULTS: "https://script.google.com/macros/s/AKfycbxW4heymcZpYRLclV5iJJT_k4i6epIup-Dar4rvVd3rjryC6_YZSA9F8yBJEkSj9UpIbw/exec",
+                SCRIPT_URL_USER: "https://script.google.com/macros/s/AKfycbzrS_A9tQFc8rLFyN-Yyu2cyIAbDP0YnD4E92CDONjEy_6teguWOqcBetjfrzevaFRa/exec",
                 
-                userData: { email: '', age: '', sex: 'Homme', expertise: '', sleep: 5, alcohol: 'non', meds: 'non', fatigue: 5, focus: 5 },
+                userData: { email: '', age: '', sex: 'Homme', expertise: '', recentIssues: 'non' },
                 surveyData: { difficulty: 'Moyenne', enoughTime: 'Oui' },
                 
                 images: [],
@@ -357,7 +341,7 @@
                             this.images[this.currentIdx].url = newUrl;
                             // Reset to Phase 1 for the replacement image
                             this.isResponding = false;
-                            this.isKnowledgeCheck = false; // On saute la vérification pour l'image de remplacement
+                            this.isKnowledgeCheck = false;
                             this.startTimer();
                             this.$nextTick(() => lucide.createIcons());
                             return;
