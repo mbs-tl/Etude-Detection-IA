@@ -130,7 +130,7 @@
                 </div>
                 <div class="aspect-[4/3] rounded-3xl overflow-hidden bg-zinc-200 shadow-2xl border-4 border-white flex items-center justify-center">
                     <template x-if="!isResponding">
-                        <img :src="currentImage.url" class="w-full h-full object-cover" alt="Test">
+                        <img :src="currentImage.url" class="w-full h-full object-contain bg-zinc-950">
                     </template>
                     <template x-if="isResponding">
                         <div class="text-zinc-400 flex flex-col items-center gap-2">
